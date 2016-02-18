@@ -73,5 +73,5 @@ finalData$subject <- as.factor(finalData$subject)
 finalData.melted<-melt(finalData,id = c("subject","activity"))
 finalData.mean <- dcast(finalData.melted, subject + activity ~ variable, mean)
 
-write.table(finalData.mean, "tidy.txt",row.names = FALSE, quote = FALSE)
 
+write.table(finalData, "TidyData.txt", row.name=FALSE)

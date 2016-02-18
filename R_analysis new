@@ -1,1 +1,77 @@
+Filepath <- 'c:/Users/Lauren/Downloads/UCI HAR Dataset/'
+setwd(Filepath)
+
+library(dplyr)
+library(data.table)
+library(tidyr)
+
+# Read 
+features     = read.table('./features.txt',header=FALSE); #imports features.txt
+activityType = read.table('./activity_labels.txt',header=FALSE); #imports activity_labels.txt
+subjectTrain = read.table('./train/subject_train.txt',header=FALSE); #imports subject_train.txt
+xTrain       = read.table('./train/x_train.txt',header=FALSE); #imports x_train.txt
+yTrain       = read.table('./train/y_train.txt',header=FALSE); #imports y_train.txt
+
+#Assigning column names to the imported data
+colnames(activityType)  = c('activityId','activityType');
+colnames(subjectTrain)  = "subjectId";
+colnames(xTrain)        = features[,2];
+colnames(yTrain)        = "activityId";
+
+
+#Merging the training and data sets to create one data set
+trainingData = cbind(yTrain,subjectTrain,xTrain);
+
+#Read test data
+subjectTest = read.table('./test/subject_test.txt',header=FALSE); #imports subject_test.txt
+xTest       = read.table('./test/x_test.txt',header=FALSE); #imports x_test.txt
+yTest       = read.table('./test/y_test.txt',header=FALSE); #imports y_test.txt
+
+# Assign column names
+colnames(subjectTest) = "subjectId";
+colnames(xTest)       = features[,2];
+colnames(yTest)       = "activityId";
+
+# Test set merge
+testData = cbind(yTest,subjectTest,xTest);
+#Combine training and test data to create final data set
+finalData = rbind(trainingData,testData);
+#Create vector for the column names from the final data set
+colNames  = colnames(finalData);
+
+#2.Extract only the measurements on the mean and standard deviation for each measurement.
+featuresMeanStd <- grep("mean\\(\\)|std\\(\\)",features$featureName,value=TRUE)
+featuresMeanStd <- union(c("subject","activityNum"), featuresMeanStd)
+
+#3.Add descriptive names to the activities in the data set
+##Merge the finalData set with the acitivityType table to include descriptive activity names
+finalData = merge(finalData,activityType,by='activityId',all.x=TRUE);
+#Update column names to include merge changes
+colNames  = colnames(finalData);
+
+#4.Appropriately labels the data set with descriptive variable names.
+head(str(finalData),2)
+
+  
+names(finalData)<-gsub("std()", "SD", names(finalData))
+names(finalData)<-gsub("mean()", "MEAN", names(finalData))
+names(finalData)<-gsub("^t", "time", names(finalData))
+names(finalData)<-gsub("^f", "frequency", names(finalData))
+names(finalData)<-gsub("Acc", "Accelerometer", names(finalData))
+names(finalData)<-gsub("Gyro", "Gyroscope", names(finalData))
+names(finalData)<-gsub("Mag", "Magnitude", names(finalData))
+names(finalData)<-gsub("BodyBody", "Body", names(finalData))
+
+head(str(finalData),6)
+colnames(finalData) = colNames;
+
+##5. Create a second, independent tidy data set with the average of each variable for each activity and each subject
+finalData = rbind(trainingData,testData);
+colnames(finalData) <- c("subject","activity", featuresMeanStd)
+finalData$activity <-factor(finalData$activity, levels = activityType[,1], labels = activityType[,2])
+finalData$subject <- as.factor(finalData$subject)
+finalData.melted<-melt(finalData,id = c("subject","activity"))
+finalData.mean <- dcast(finalData.melted, subject + activity ~ variable, mean)
+
+write.table(finalData.mean, "tidy.txt",row.names = FALSE, quote = FALSE)
 
